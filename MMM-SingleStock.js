@@ -7,8 +7,7 @@
 
 Module.register('MMM-SingleStock', {
   defaults: {
-    stockSymbol: 'GOOG',
-    apiToken: '',
+    stockSymbol: 'SAP.DE',
     updateInterval: 3600000,
     showChange: true,
     label: 'symbol' // 'symbol' | 'companyName' | 'none'
@@ -62,7 +61,9 @@ Module.register('MMM-SingleStock', {
   _getData(onCompleteCallback) {
     const self = this;
 
-    const url = `https://cloud.iexapis.com/v1/stock/${this.config.stockSymbol}/quote?token=${this.config.apiToken}`;
+    const baseUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${defaults.stockSymbol}`;
+    const urlParameters = `?formatted=false&modules=price%2CsummaryDetail%2CpageViews&corsDomain=finance.yahoo.com`;
+    const url = baseUrl + urlParameters;
 
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
@@ -82,18 +83,19 @@ Module.register('MMM-SingleStock', {
 
   _processResponse(responseBody) {
     const response = JSON.parse(responseBody);
+    const res = response.quoteSummary.result[0].price;
 
-    this.viewModel = {
-      price: response.latestPrice,
-      change: response.change > 0 ? `+${response.change}` : `${response.change}`
-    };
+    let price = res.regularMarketPrice;
+    let change = res.regularMarketChange;
+    if(change > 0) change = '+' + change;
+    this.viewModel = { price, change};
 
     switch (this.config.label) {
       case 'symbol':
-        this.viewModel.label = response.symbol;
+        this.viewModel.label = res.symbol;
         break;
       case 'companyName':
-        this.viewModel.label = response.companyName;
+        this.viewModel.label = res.longName;
         break;
       case 'none':
         this.viewModel.label = '';
